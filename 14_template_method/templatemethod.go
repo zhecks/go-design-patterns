@@ -10,11 +10,31 @@ type LoginMode struct {
 	LoginID  string
 	Password string
 }
-type LoginTemplate struct {
+
+type Loginer interface {
+	Login(lm LoginMode) bool
 }
 
-func (lt *LoginTemplate) Login(lm LoginMode) {
+type implement interface {
+	FindLoginUser(loginID string) *LoginMode
+	Match(lm LoginMode, dbLm LoginMode) bool
+}
+type LoginTemplate struct {
+	implement
+}
 
+func NewTemplate(impl implement) Loginer {
+	return &LoginTemplate{
+		implement: impl,
+	}
+}
+
+func (lt *LoginTemplate) Login(lm LoginMode) bool {
+	dbLm := lt.implement.FindLoginUser(lm.LoginID)
+	if dbLm == nil {
+		return false
+	}
+	return lt.implement.Match(lm, *dbLm)
 }
 
 func (lt *LoginTemplate) FindLoginUser(_ string) *LoginMode {
@@ -39,6 +59,13 @@ type WokerLogin struct {
 	LoginTemplate
 }
 
+func (wl *WokerLogin) FindLoginUser(loginID string) *LoginMode {
+	return &LoginMode{
+		LoginID:  loginID,
+		Password: wl.EncrypPwd("123"),
+	}
+}
+
 func (wl *WokerLogin) Match(lm, dbLm LoginMode) bool {
 	if lm.LoginID == dbLm.LoginID && wl.EncrypPwd(lm.Password) == dbLm.Password {
 		return true
@@ -48,4 +75,11 @@ func (wl *WokerLogin) Match(lm, dbLm LoginMode) bool {
 
 type NormalLogin struct {
 	LoginTemplate
+}
+
+func (nl *NormalLogin) FindLoginUser(loginID string) *LoginMode {
+	return &LoginMode{
+		LoginID:  loginID,
+		Password: "123",
+	}
 }
